@@ -1,3 +1,26 @@
+/* Google Button Styles */
+.google-btn {
+  background-color: #4285F4;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 10px auto 0 auto;
+  width: 160px;
+}
+
+.google-btn:hover {
+  background-color: #357ae8;
+}
+
+.google-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* End of Google Button Styles */
+
 * {
     box-sizing: border-box;
     margin: 0;
@@ -15,7 +38,7 @@
   
   .container {
     width: 800px;
-    height: 500px;
+    height: 550px;
     background-color: #fff;
     border-radius: 30px;
     overflow: hidden;
@@ -175,7 +198,7 @@
   
   .main-button {
     display: block;
-    margin: 20px auto 0 auto;
+    margin: 15px auto 0 auto;
     width: 120px;
   }
   
@@ -318,8 +341,32 @@
 
   /* Loading state styles */
   button:disabled {
-    opacity: 0.6;
+    opacity: 0.8;
     cursor: not-allowed;
+  }
+
+  /* Loader spinner styles */
+  .loader {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 0.8s ease-in-out infinite;
+    margin-right: 8px;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .button-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   /* Tablet styles */

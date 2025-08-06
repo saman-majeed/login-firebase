@@ -1,0 +1,7 @@
+127.0.0.1 - - [06/Aug/2025 11:15:34] "HEAD / HTTP/1.1" 200 -
+127.0.0.1 - - [06/Aug/2025 11:15:42] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [06/Aug/2025 11:37:28] code 404, message File not found
+127.0.0.1 - - [06/Aug/2025 11:37:28] "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 -
+127.0.0.1 - - [06/Aug/2025 11:42:40] "GET / HTTP/1.1" 304 -
+127.0.0.1 - - [06/Aug/2025 12:44:23] "GET /home.html HTTP/1.1" 200 -
+127.0.0.1 - - [06/Aug/2025 12:44:28] "GET /index.html HTTP/1.1" 200 -
