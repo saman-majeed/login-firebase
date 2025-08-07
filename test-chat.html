@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat Debug Test</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .test-section { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .log { background: #000; color: #0f0; padding: 10px; font-family: monospace; margin: 10px 0; white-space: pre-wrap; }
+        button { background: #007cba; color: white; border: none; padding: 10px 20px; margin: 5px; cursor: pointer; }
+        input { padding: 8px; margin: 5px; width: 200px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Chat Debug Test</h1>
+        
+        <div class="test-section">
+            <h3>Current User Info</h3>
+            <div id="userInfo">Loading...</div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test Chat Messages</h3>
+            <input type="text" id="otherUserId" placeholder="Enter other user's UID">
+            <button onclick="startListening()">Start Listening</button>
+            <button onclick="sendTestMessage()">Send Test Message</button>
+            <div id="messagesLog" class="log"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Debug Log</h3>
+            <button onclick="clearLog()">Clear Log</button>
+            <div id="debugLog" class="log"></div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase config
+        const firebaseConfig = {
+            apiKey: "AIzaSyCveMPPfb0hofCo0bAWnUQhYQlo5aCdANk",
+            authDomain: "login-89aa6.firebaseapp.com",
+            projectId: "login-89aa6",
+            storageBucket: "login-89aa6.firebasestorage.app",
+            messagingSenderId: "976356583174",
+            appId: "1:976356583174:web:f3e482fed29491f6b56087",
+            measurementId: "G-KV5PYS7P6P"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        
+        let currentUser = null;
+        let listener = null;
+
+        // Logging
+        function log(message) {
+            const debugLog = document.getElementById('debugLog');
+            const timestamp = new Date().toLocaleTimeString();
+            debugLog.textContent += `[${timestamp}] ${message}\n`;
+            debugLog.scrollTop = debugLog.scrollHeight;
+            console.log(message);
+        }
+
+        function clearLog() {
+            document.getElementById('debugLog').textContent = '';
+            document.getElementById('messagesLog').textContent = '';
+        }
+
+        // Auth state
+        auth.onAuthStateChanged((user) => {
+            if (user && user.emailVerified) {
+                currentUser = user;
+                document.getElementById('userInfo').innerHTML = `
+                    <strong>Logged in as:</strong> ${user.displayName || user.email}<br>
+                    <strong>User ID:</strong> ${user.uid}
+                `;
+                log(`User authenticated: ${user.uid}`);
+            } else {
+                document.getElementById('userInfo').innerHTML = '<span style="color: red">Not authenticated or email not verified</span>';
+                log('User not authenticated');
+            }
+        });
+
+        // Chat ID generator
+        function getChatId(userId1, userId2) {
+            const sorted = [userId1, userId2].sort();
+            return `${sorted[0]}_${sorted[1]}`;
+        }
+
+        // Start listening for messages
+        function startListening() {
+            const otherUserId = document.getElementById('otherUserId').value.trim();
+            if (!otherUserId) {
+                alert('Please enter the other user\'s ID');
+                return;
+            }
+            if (!currentUser) {
+                alert('Please login first');
+                return;
+            }
+
+            const chatId = getChatId(currentUser.uid, otherUserId);
+            log(`Starting listener for chat: ${chatId}`);
+            log(`Between users: ${currentUser.uid} and ${otherUserId}`);
+
+            // Stop existing listener
+            if (listener) listener();
+
+            // Start new listener
+            listener = db.collection('chats')
+                .doc(chatId)
+                .collection('messages')
+                .orderBy('timestamp', 'asc')
+                .onSnapshot((snapshot) => {
+                    log(`Received snapshot with ${snapshot.size} messages`);
+                    
+                    const messagesLog = document.getElementById('messagesLog');
+                    messagesLog.textContent = '';
+                    
+                    snapshot.forEach((doc) => {
+                        const msg = doc.data();
+                        const isOwn = msg.senderId === currentUser.uid;
+                        messagesLog.textContent += `[${isOwn ? 'ME' : 'OTHER'}] ${msg.text} (ID: ${doc.id})\n`;
+                        
+                        log(`Message: "${msg.text}" from ${msg.senderId} (own: ${isOwn})`);
+                    });
+                }, (error) => {
+                    log(`Listener error: ${error.code} - ${error.message}`);
+                });
+        }
+
+        // Send test message
+        async function sendTestMessage() {
+            const otherUserId = document.getElementById('otherUserId').value.trim();
+            if (!otherUserId || !currentUser) {
+                alert('Please enter other user ID and login first');
+                return;
+            }
+
+            const chatId = getChatId(currentUser.uid, otherUserId);
+            const testMessage = `Test message from ${currentUser.displayName || currentUser.email} at ${new Date().toLocaleTimeString()}`;
+
+            try {
+                log(`Sending message to chat: ${chatId}`);
+                const docRef = await db.collection('chats')
+                    .doc(chatId)
+                    .collection('messages')
+                    .add({
+                        text: testMessage,
+                        senderId: currentUser.uid,
+                        recipientId: otherUserId,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+
+                log(`Message sent with ID: ${docRef.id}`);
+            } catch (error) {
+                log(`Send error: ${error.code} - ${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html>

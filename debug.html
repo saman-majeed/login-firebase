@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Chat Debug Tool</title>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .test-section {
+      background: white;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .success { color: #27ae60; font-weight: bold; }
+    .error { color: #e74c3c; font-weight: bold; }
+    .warning { color: #f39c12; font-weight: bold; }
+    .info { color: #3498db; font-weight: bold; }
+    button {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background: #2980b9;
+    }
+    .log {
+      background: #2c3e50;
+      color: #ecf0f1;
+      padding: 15px;
+      border-radius: 4px;
+      font-family: monospace;
+      white-space: pre-wrap;
+      max-height: 300px;
+      overflow-y: auto;
+      margin: 10px 0;
+    }
+    input {
+      padding: 8px;
+      margin: 5px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔧 Chat Debug Tool</h1>
+  <p>This tool will help diagnose chat issues by testing each component separately.</p>
+
+  <div class="test-section">
+    <h3>1. Firebase Connection Test</h3>
+    <div id="firebaseStatus">Testing...</div>
+    <button onclick="testFirebaseConnection()">Retry Firebase Test</button>
+  </div>
+
+  <div class="test-section">
+    <h3>2. Authentication Test</h3>
+    <div id="authStatus">Checking authentication...</div>
+    <div id="userInfo"></div>
+  </div>
+
+  <div class="test-section">
+    <h3>3. Firestore Read Test</h3>
+    <div id="firestoreReadStatus">Testing...</div>
+    <button onclick="testFirestoreRead()">Test Firestore Read</button>
+  </div>
+
+  <div class="test-section">
+    <h3>4. Firestore Write Test</h3>
+    <div id="firestoreWriteStatus">Ready to test</div>
+    <button onclick="testFirestoreWrite()">Test Firestore Write</button>
+  </div>
+
+  <div class="test-section">
+    <h3>5. Chat Collection Test</h3>
+    <div id="chatCollectionStatus">Ready to test</div>
+    <input type="text" id="testUserId" placeholder="Enter another user ID to test chat with">
+    <button onclick="testChatCollection()">Test Chat Collection</button>
+  </div>
+
+  <div class="test-section">
+    <h3>6. Real-time Listener Test</h3>
+    <div id="realtimeStatus">Ready to test</div>
+    <button onclick="testRealtimeListener()">Start Real-time Test</button>
+    <button onclick="stopRealtimeTest()">Stop Test</button>
+  </div>
+
+  <div class="test-section">
+    <h3>7. Send Test Message</h3>
+    <div id="sendMessageStatus">Ready to test</div>
+    <input type="text" id="testMessage" placeholder="Enter test message" value="Debug test message">
+    <button onclick="sendTestMessage()">Send Test Message</button>
+  </div>
+
+  <div class="test-section">
+    <h3>Debug Log</h3>
+    <button onclick="clearLog()">Clear Log</button>
+    <div id="debugLog" class="log"></div>
+  </div>
+
+  <script>
+    // Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyCveMPPfb0hofCo0bAWnUQhYQlo5aCdANk",
+      authDomain: "login-89aa6.firebaseapp.com",
+      projectId: "login-89aa6",
+      storageBucket: "login-89aa6.firebasestorage.app",
+      messagingSenderId: "976356583174",
+      appId: "1:976356583174:web:f3e482fed29491f6b56087",
+      measurementId: "G-KV5PYS7P6P"
+    };
+
+    let app, auth, db, currentUser;
+    let testListener = null;
+
+    // Logging function
+    function log(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const logDiv = document.getElementById('debugLog');
+      const logEntry = `[${timestamp}] ${message}\n`;
+      logDiv.textContent += logEntry;
+      logDiv.scrollTop = logDiv.scrollHeight;
+      console.log(message);
+    }
+
+    function clearLog() {
+      document.getElementById('debugLog').textContent = '';
+    }
+
+    function setStatus(elementId, message, type = 'info') {
+      const element = document.getElementById(elementId);
+      element.innerHTML = `<span class="${type}">${message}</span>`;
+    }
+
+    // Test 1: Firebase Connection
+    function testFirebaseConnection() {
+      try {
+        app = firebase.initializeApp(firebaseConfig);
+        auth = firebase.auth();
+        db = firebase.firestore();
+        setStatus('firebaseStatus', '✅ Firebase initialized successfully', 'success');
+        log('Firebase initialized successfully');
+        
+        // Test authentication state
+        auth.onAuthStateChanged((user) => {
+          if (user && user.emailVerified) {
+            currentUser = user;
+            setStatus('authStatus', `✅ Authenticated as: ${user.displayName || user.email}`, 'success');
+            setStatus('userInfo', `User ID: ${user.uid}<br>Email: ${user.email}<br>Verified: ${user.emailVerified}`, 'info');
+            log(`User authenticated: ${user.uid}`);
+            
+            // Auto-run next tests
+            testFirestoreRead();
+          } else if (user && !user.emailVerified) {
+            setStatus('authStatus', '⚠️ User logged in but email not verified', 'warning');
+            log('User email not verified');
+          } else {
+            setStatus('authStatus', '❌ Not authenticated - please login first', 'error');
+            log('User not authenticated');
+          }
+        });
+        
+      } catch (error) {
+        setStatus('firebaseStatus', `❌ Firebase initialization failed: ${error.message}`, 'error');
+        log(`Firebase initialization error: ${error.message}`);
+      }
+    }
+
+    // Test 2: Firestore Read
+    async function testFirestoreRead() {
+      try {
+        log('Testing Firestore read permissions...');
+        const usersSnapshot = await db.collection('users').limit(1).get();
+        
+        if (usersSnapshot.empty) {
+          setStatus('firestoreReadStatus', '⚠️ Users collection is empty', 'warning');
+          log('Users collection is empty');
+        } else {
+          setStatus('firestoreReadStatus', `✅ Can read users collection (${usersSnapshot.size} users)`, 'success');
+          log(`Successfully read users collection: ${usersSnapshot.size} users found`);
+        }
+      } catch (error) {
+        setStatus('firestoreReadStatus', `❌ Cannot read from Firestore: ${error.message}`, 'error');
+        log(`Firestore read error: ${error.code} - ${error.message}`);
+      }
+    }
+
+    // Test 3: Firestore Write
+    async function testFirestoreWrite() {
+      if (!currentUser) {
+        setStatus('firestoreWriteStatus', '❌ Must be authenticated first', 'error');
+        return;
+      }
+
+      try {
+        log('Testing Firestore write permissions...');
+        const testDoc = {
+          testField: 'debug test',
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          userId: currentUser.uid
+        };
+
+        await db.collection('debug_test').doc('test_write').set(testDoc);
+        setStatus('firestoreWriteStatus', '✅ Can write to Firestore', 'success');
+        log('Successfully wrote test document to Firestore');
+
+        // Clean up test document
+        setTimeout(async () => {
+          await db.collection('debug_test').doc('test_write').delete();
+          log('Cleaned up test document');
+        }, 2000);
+
+      } catch (error) {
+        setStatus('firestoreWriteStatus', `❌ Cannot write to Firestore: ${error.message}`, 'error');
+        log(`Firestore write error: ${error.code} - ${error.message}`);
+      }
+    }
+
+    // Test 4: Chat Collection
+    async function testChatCollection() {
+      if (!currentUser) {
+        setStatus('chatCollectionStatus', '❌ Must be authenticated first', 'error');
+        return;
+      }
+
+      const testUserId = document.getElementById('testUserId').value.trim();
+      if (!testUserId) {
+        setStatus('chatCollectionStatus', '❌ Please enter a user ID to test with', 'error');
+        return;
+      }
+
+      try {
+        log(`Testing chat collection access with user: ${testUserId}`);
+        const chatId = getChatId(currentUser.uid, testUserId);
+        
+        // Try to read chat collection
+        const chatDoc = await db.collection('chats').doc(chatId).get();
+        log(`Chat document exists: ${chatDoc.exists}`);
+
+        // Try to read messages
+        const messagesSnapshot = await db.collection('chats').doc(chatId).collection('messages').limit(5).get();
+        
+        setStatus('chatCollectionStatus', `✅ Chat access OK. Messages found: ${messagesSnapshot.size}`, 'success');
+        log(`Successfully accessed chat ${chatId}, found ${messagesSnapshot.size} messages`);
+
+      } catch (error) {
+        setStatus('chatCollectionStatus', `❌ Chat collection error: ${error.message}`, 'error');
+        log(`Chat collection error: ${error.code} - ${error.message}`);
+      }
+    }
+
+    // Test 5: Real-time Listener
+    function testRealtimeListener() {
+      if (!currentUser) {
+        setStatus('realtimeStatus', '❌ Must be authenticated first', 'error');
+        return;
+      }
+
+      const testUserId = document.getElementById('testUserId').value.trim();
+      if (!testUserId) {
+        setStatus('realtimeStatus', '❌ Please enter a user ID to test with', 'error');
+        return;
+      }
+
+      try {
+        log('Starting real-time listener test...');
+        const chatId = getChatId(currentUser.uid, testUserId);
+        
+        testListener = db.collection('chats')
+          .doc(chatId)
+          .collection('messages')
+          .orderBy('timestamp', 'desc')
+          .limit(10)
+          .onSnapshot((snapshot) => {
+            log(`Real-time update received: ${snapshot.size} messages`);
+            
+            snapshot.docChanges().forEach((change) => {
+              if (change.type === 'added') {
+                const msg = change.doc.data();
+                log(`New message detected: "${msg.text}" from ${msg.senderId}`);
+              }
+            });
+
+            setStatus('realtimeStatus', `✅ Real-time listener active (${snapshot.size} messages)`, 'success');
+          }, (error) => {
+            setStatus('realtimeStatus', `❌ Real-time listener error: ${error.message}`, 'error');
+            log(`Real-time listener error: ${error.code} - ${error.message}`);
+          });
+
+        log('Real-time listener started successfully');
+        
+      } catch (error) {
+        setStatus('realtimeStatus', `❌ Failed to start listener: ${error.message}`, 'error');
+        log(`Real-time listener setup error: ${error.message}`);
+      }
+    }
+
+    function stopRealtimeTest() {
+      if (testListener) {
+        testListener();
+        testListener = null;
+        setStatus('realtimeStatus', 'Real-time listener stopped', 'info');
+        log('Real-time listener stopped');
+      }
+    }
+
+    // Test 6: Send Message
+    async function sendTestMessage() {
+      if (!currentUser) {
+        setStatus('sendMessageStatus', '❌ Must be authenticated first', 'error');
+        return;
+      }
+
+      const testUserId = document.getElementById('testUserId').value.trim();
+      const testMessage = document.getElementById('testMessage').value.trim();
+      
+      if (!testUserId || !testMessage) {
+        setStatus('sendMessageStatus', '❌ Please enter both user ID and message', 'error');
+        return;
+      }
+
+      try {
+        log(`Sending test message: "${testMessage}" to user: ${testUserId}`);
+        const chatId = getChatId(currentUser.uid, testUserId);
+        
+        const messageData = {
+          text: testMessage,
+          senderId: currentUser.uid,
+          recipientId: testUserId,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        const messageRef = await db.collection('chats')
+          .doc(chatId)
+          .collection('messages')
+          .add(messageData);
+
+        log(`Message sent successfully with ID: ${messageRef.id}`);
+
+        // Update chat metadata
+        await db.collection('chats').doc(chatId).set({
+          participants: [currentUser.uid, testUserId],
+          lastMessage: testMessage,
+          lastMessageTime: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        setStatus('sendMessageStatus', '✅ Test message sent successfully!', 'success');
+        log('Chat metadata updated successfully');
+
+      } catch (error) {
+        setStatus('sendMessageStatus', `❌ Failed to send message: ${error.message}`, 'error');
+        log(`Send message error: ${error.code} - ${error.message}`);
+      }
+    }
+
+    // Helper function
+    function getChatId(userId1, userId2) {
+      const sortedUserIds = [userId1, userId2].sort();
+      return `${sortedUserIds[0]}_${sortedUserIds[1]}`;
+    }
+
+    // Initialize on page load
+    window.onload = function() {
+      testFirebaseConnection();
+    };
+
+    // Handle page unload
+    window.onbeforeunload = function() {
+      if (testListener) {
+        testListener();
+      }
+    };
+  </script>
+</body>
+</html>

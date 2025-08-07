@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Create Firestore Index</title>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    button {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 10px;
+    }
+    button:hover {
+      background: #2980b9;
+    }
+    .success { color: #27ae60; font-weight: bold; }
+    .error { color: #e74c3c; font-weight: bold; }
+    .info { color: #3498db; font-weight: bold; }
+    pre {
+      background: #2c3e50;
+      color: #ecf0f1;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      margin: 15px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔧 Create Firestore Index for Messages</h1>
+    <p>This tool will help you create the required Firestore index for message ordering.</p>
+    
+    <div id="status"></div>
+    
+    <h3>Step 1: Test Current Query</h3>
+    <p>This will test if the index exists by running the orderBy query.</p>
+    <button onclick="testMessageQuery()">Test Message Query</button>
+    
+    <h3>Step 2: Create Index (if needed)</h3>
+    <p>If the test fails, click this to get the index creation link:</p>
+    <button onclick="createIndex()">Get Index Creation Link</button>
+    
+    <div id="results"></div>
+  </div>
+
+  <script>
+    // Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyCveMPPfb0hofCo0bAWnUQhYQlo5aCdANk",
+      authDomain: "login-89aa6.firebaseapp.com",
+      projectId: "login-89aa6",
+      storageBucket: "login-89aa6.firebasestorage.app",
+      messagingSenderId: "976356583174",
+      appId: "1:976356583174:web:f3e482fed29491f6b56087",
+      measurementId: "G-KV5PYS7P6P"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    
+    function updateStatus(message, type = 'info') {
+      const statusDiv = document.getElementById('status');
+      statusDiv.innerHTML = `<div class="${type}">${message}</div>`;
+    }
+    
+    function updateResults(content) {
+      document.getElementById('results').innerHTML = content;
+    }
+
+    async function testMessageQuery() {
+      updateStatus('Testing message query with orderBy timestamp...', 'info');
+      
+      try {
+        // Try to run a simple query with orderBy timestamp
+        // This will work if index exists, fail if it doesn't
+        const testQuery = await db.collection('chats')
+          .doc('test_chat_id')
+          .collection('messages')
+          .orderBy('timestamp', 'asc')
+          .limit(1)
+          .get();
+        
+        updateStatus('✅ Index exists! Messages can be ordered by timestamp.', 'success');
+        updateResults(`
+          <div class="success">
+            <h4>✅ Index Test Passed!</h4>
+            <p>Your Firestore database already has the required index for ordering messages by timestamp.</p>
+            <p><strong>Your chat messages should be displaying in correct order.</strong></p>
+          </div>
+        `);
+        
+      } catch (error) {
+        console.error('Index test failed:', error);
+        
+        if (error.code === 'failed-precondition') {
+          updateStatus('❌ Index missing! Need to create index for message ordering.', 'error');
+          updateResults(`
+            <div class="error">
+              <h4>❌ Index Missing</h4>
+              <p>The required index for ordering messages by timestamp is missing.</p>
+              <p><strong>Error:</strong> ${error.message}</p>
+              <p>Click "Get Index Creation Link" below to create the index.</p>
+            </div>
+          `);
+        } else {
+          updateStatus(`❌ Query failed: ${error.message}`, 'error');
+          updateResults(`
+            <div class="error">
+              <h4>❌ Query Failed</h4>
+              <p><strong>Error Code:</strong> ${error.code}</p>
+              <p><strong>Error Message:</strong> ${error.message}</p>
+            </div>
+          `);
+        }
+      }
+    }
+
+    function createIndex() {
+      updateStatus('Generating index creation instructions...', 'info');
+      
+      const indexCreationSteps = `
+        <div class="info">
+          <h4>📝 Manual Index Creation Steps</h4>
+          <ol>
+            <li><strong>Go to Firebase Console:</strong> <a href="https://console.firebase.google.com/" target="_blank">https://console.firebase.google.com/</a></li>
+            <li><strong>Select your project:</strong> login-89aa6</li>
+            <li><strong>Navigate to:</strong> Firestore Database → Indexes</li>
+            <li><strong>Click:</strong> "Create Index"</li>
+            <li><strong>Configure:</strong>
+              <ul>
+                <li><strong>Collection ID:</strong> <code>messages</code></li>
+                <li><strong>Field path:</strong> <code>timestamp</code></li>
+                <li><strong>Query scope:</strong> Collection group</li>
+                <li><strong>Order:</strong> Ascending</li>
+              </ul>
+            </li>
+            <li><strong>Click:</strong> "Create"</li>
+            <li><strong>Wait:</strong> 2-5 minutes for index to build</li>
+            <li><strong>Test again:</strong> Use the "Test Message Query" button</li>
+          </ol>
+        </div>
+      `;
+      
+      updateResults(indexCreationSteps);
+      
+      // Also try to trigger the index creation automatically
+      setTimeout(triggerIndexCreation, 1000);
+    }
+    
+    async function triggerIndexCreation() {
+      try {
+        updateStatus('Attempting to trigger automatic index creation...', 'info');
+        
+        // This query will fail but should generate an index creation link in the error
+        await db.collectionGroup('messages')
+          .orderBy('timestamp', 'asc')
+          .limit(1)
+          .get();
+          
+      } catch (error) {
+        if (error.code === 'failed-precondition' && error.message.includes('https://')) {
+          // Extract the index creation URL from the error message
+          const urlMatch = error.message.match(/(https:\/\/console\.firebase\.google\.com\/[^\s]+)/);
+          
+          if (urlMatch) {
+            const indexUrl = urlMatch[1];
+            updateResults(`
+              <div class="success">
+                <h4>🚀 Automatic Index Creation Link Generated!</h4>
+                <p><strong>Click this link to create the index automatically:</strong></p>
+                <p><a href="${indexUrl}" target="_blank" style="background: #27ae60; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">Create Index Automatically</a></p>
+                <p><em>This will open Firebase Console with the index pre-configured. Just click "Create".</em></p>
+              </div>
+            `);
+            updateStatus('✅ Automatic index creation link generated!', 'success');
+          } else {
+            updateStatus('Manual index creation required (see steps above)', 'info');
+          }
+        } else {
+          console.error('Unexpected error:', error);
+        }
+      }
+    }
+  </script>
+</body>
+</html>

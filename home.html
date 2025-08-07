@@ -2,40 +2,556 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Home</title>
+  <title>Chat App - Home</title>
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
     body {
-      font-family: sans-serif;
-      background: #f4f4f4;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f6fa;
+      height: 100vh;
+      overflow: hidden;
+    }
+    
+    .app-container {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+    }
+    
+    /* Sidebar Styles */
+    .sidebar {
+      width: 350px;
+      background: #ffffff;
+      border-right: 1px solid #e1e8ed;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
     }
-    h1 {
-      font-size: 2rem;
-      color: #333;
+    
+    .user-info {
+      padding: 20px;
+      background: #2c3e50;
+      color: white;
     }
-    button {
-      margin-top: 20px;
-      padding: 10px 20px;
-      font-weight: bold;
-      background-color: #4CAF50;
+    
+    .user-info h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      word-break: break-word;
+    }
+    
+    .logout-btn {
+      background: #e74c3c;
       color: white;
       border: none;
-      border-radius: 6px;
+      padding: 8px 16px;
+      border-radius: 4px;
       cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    
+    .logout-btn:hover {
+      background: #c0392b;
+    }
+    
+    .users-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    
+    .users-section h4 {
+      padding: 20px 20px 10px;
+      color: #2c3e50;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    
+    .user-list {
+      list-style: none;
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 10px;
+    }
+    
+    .user-item {
+      display: flex;
+      align-items: center;
+      padding: 12px 15px;
+      cursor: pointer;
+      border-radius: 8px;
+      margin: 2px 0;
+      transition: all 0.2s ease;
+      position: relative;
+      min-height: 60px;
+    }
+    
+    .user-item:hover {
+      background: #f8f9fa;
+    }
+    
+    .user-item.active {
+      background: #ad1457;
+      color: white;
+    }
+    
+    .user-avatar {
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      background: #34495e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      margin-right: 12px;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    
+    .user-item.active .user-avatar {
+      background: #880e4f;
+    }
+    
+    .user-details {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    
+    .user-name {
+      font-weight: 600;
+      font-size: 14px;
+      color: #2c3e50;
+      word-break: break-word;
+      margin-bottom: 2px;
+    }
+    
+    .user-item.active .user-name {
+      color: white;
+    }
+    
+    .last-message {
+      font-size: 12px;
+      color: #7f8c8d;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 180px;
+    }
+    
+    .user-item.active .last-message {
+      color: #ecf0f1;
+    }
+    
+    .user-status {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      justify-content: space-between;
+      height: 45px;
+      padding: 2px 0;
+    }
+    
+    .last-message-time {
+      font-size: 11px;
+      color: #95a5a6;
+      font-weight: 500;
+    }
+    
+    .user-item.active .last-message-time {
+      color: #ecf0f1;
+    }
+    
+    .online-status {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-top: auto;
+    }
+    
+    .recent-chat-indicator {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #ad1457;
+      border: 2px solid white;
+    }
+    
+    .user-item.active .recent-chat-indicator {
+      background: #880e4f;
+    }
+    
+    .unread-count {
+      background: #27ae60;
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 10px;
+      min-width: 18px;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: auto;
+      margin-top: -5px;
+    }
+    
+    .user-item.active .unread-count {
+      background: #c2185b;
+    }
+    
+    .user-status-with-unread {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      justify-content: space-between;
+      height: 45px;
+      padding: 2px 0;
+      position: relative;
+    }
+    
+    .loading {
+      padding: 20px;
+      text-align: center;
+      color: #7f8c8d;
+      font-style: italic;
+    }
+    
+    /* Chat Area Styles */
+    .chat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+    }
+    
+    .no-chat {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: #7f8c8d;
+      background: #fafbfc;
+    }
+    
+    .chat-header {
+      padding: 20px 25px;
+      border-bottom: 1px solid #e1e8ed;
+      background: #ffffff;
+    }
+    
+    .chat-header h3 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #2c3e50;
+      word-break: break-word;
+    }
+    
+    .messages-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 25px;
+      background: #fafbfc;
+      min-height: 0; /* Important: allows flex child to shrink */
+      max-height: calc(100vh - 200px); /* Ensure it doesn't grow too large */
+    }
+    
+    .message {
+      margin-bottom: 16px;
+      max-width: 70%;
+    }
+    
+    .message.own {
+      margin-left: auto;
+      text-align: right;
+    }
+    
+    .message-content {
+      background: #f1f3f4;
+      padding: 12px 16px;
+      border-radius: 18px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      word-wrap: break-word;
+      line-height: 1.4;
+      color: #2c3e50;
+    }
+    
+    .message.own .message-content {
+      background: #fce4ec;
+      color: #ad1457;
+    }
+    
+    .message-sender {
+      font-size: 12px;
+      font-weight: 600;
+      color: #7f8c8d;
+      margin-bottom: 4px;
+    }
+    
+    .message-time {
+      font-size: 11px;
+      color: #95a5a6;
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 4px;
+    }
+    
+    .message.own .message-time {
+      color: #ecf0f1;
+    }
+    
+    /* Message status ticks */
+    .message-status {
+      display: flex;
+      align-items: center;
+      margin-left: 6px;
+      flex-shrink: 0;
+    }
+    
+    .tick {
+      width: 14px;
+      height: 14px;
+      display: inline-block;
+      position: relative;
+      flex-shrink: 0;
+    }
+    
+    .tick svg {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.3));
+    }
+    
+    /* Single dark grey tick - sent */
+    .status-sent .tick {
+      color: #4a4a4a;
+    }
+    
+    /* Double dark grey ticks - delivered */
+    .status-delivered .tick {
+      color: #4a4a4a;
+    }
+    
+    /* Double red ticks - read */
+    .status-read .tick {
+      color: #dc2626;
+    }
+    
+    /* Double tick styling */
+    .double-tick {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    
+    .double-tick .tick:first-child {
+      margin-right: -8px;
+      z-index: 1;
+      opacity: 0.7;
+    }
+    
+    .double-tick .tick:last-child {
+      z-index: 2;
+      opacity: 1;
+    }
+    
+    .message-input-container {
+      padding: 20px 25px;
+      background: #ffffff;
+      border-top: 1px solid #e1e8ed;
+    }
+    
+    .message-input-wrapper {
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+      background: #f8f9fa;
+      border-radius: 24px;
+      padding: 8px 16px;
+      border: 1px solid #e1e8ed;
+      transition: border-color 0.2s;
+    }
+    
+    .message-input-wrapper:focus-within {
+      border-color: #3498db;
+      background: #ffffff;
+    }
+    
+    .message-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      background: transparent;
+      resize: none;
+      font-family: inherit;
+      font-size: 14px;
+      line-height: 1.4;
+      padding: 8px 0;
+      min-height: 20px;
+      max-height: 100px;
+    }
+    
+    .send-btn {
+      background: #3498db;
+      border: none;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: white;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    
+    .send-btn:disabled {
+      background: #bdc3c7;
+      cursor: not-allowed;
+    }
+    
+    .send-btn:not(:disabled):hover {
+      background: #2980b9;
+      transform: scale(1.05);
+    }
+    
+    /* Scrollbar Styles */
+    .messages-container::-webkit-scrollbar,
+    .user-list::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    .messages-container::-webkit-scrollbar-track,
+    .user-list::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    .messages-container::-webkit-scrollbar-thumb,
+    .user-list::-webkit-scrollbar-thumb {
+      background: #bdc3c7;
+      border-radius: 3px;
+    }
+    
+    .messages-container::-webkit-scrollbar-thumb:hover,
+    .user-list::-webkit-scrollbar-thumb:hover {
+      background: #95a5a6;
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .app-container {
+        flex-direction: column;
+      }
+      
+      .sidebar {
+        width: 100%;
+        height: auto;
+        max-height: 40vh;
+        border-right: none;
+        border-bottom: 1px solid #e1e8ed;
+      }
+      
+      .chat-area {
+        flex: 1;
+        min-height: 0;
+      }
+      
+      .message {
+        max-width: 85%;
+      }
+      
+      .users-section {
+        max-height: calc(40vh - 80px);
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .sidebar {
+        width: 280px;
+      }
+      
+      .message-input-container {
+        padding: 15px 20px;
+      }
+      
+      .messages-container {
+        padding: 15px 20px;
+      }
+      
+      .chat-header {
+        padding: 15px 20px;
+      }
     }
   </style>
 </head>
 <body>
-  <h1 id="message">Checking session...</h1>
-  <button id="logoutBtn" style="display: none;">Logout</button>
+  <div class="app-container">
+    <!-- Sidebar with user list -->
+    <div class="sidebar">
+      <div class="user-info">
+        <h3 id="currentUserName">Loading...</h3>
+        <button id="logoutBtn" class="logout-btn">Logout</button>
+      </div>
+      <div class="users-section">
+        <h4>Active Users</h4>
+        <ul id="userList" class="user-list">
+          <li class="loading">Loading users...</li>
+        </ul>
+      </div>
+    </div>
+    
+    <!-- Chat area -->
+    <div class="chat-area">
+      <div id="noChatSelected" class="no-chat">
+        Select a user to start chatting
+      </div>
+      
+      <div id="chatInterface" style="display: none; flex: 1; flex-direction: column; min-height: 0;">
+        <div class="chat-header">
+          <h3 id="chatRecipientName">Chat</h3>
+        </div>
+        
+        <div id="messagesContainer" class="messages-container">
+          <!-- Messages will be displayed here -->
+        </div>
+        
+        <div class="message-input-container">
+          <div class="message-input-wrapper">
+            <textarea id="messageInput" class="message-input" placeholder="Type a message..." rows="1"></textarea>
+            <button id="sendMessageBtn" class="send-btn" disabled>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script>
     // Firebase Configuration - REPLACE WITH YOUR ACTUAL FIREBASE CONFIG
@@ -52,22 +568,1070 @@
     // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
-
+    const db = firebase.firestore();
+    
+    // Global variables
+    let currentUser = null;
+    let selectedUserId = null;
+    let selectedUserName = null;
+    let usersUnsubscribe = null;
+    let messagesUnsubscribe = null;
+    
+    // DOM Elements
+    const userList = document.getElementById('userList');
+    const currentUserName = document.getElementById('currentUserName');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const noChatSelected = document.getElementById('noChatSelected');
+    const chatInterface = document.getElementById('chatInterface');
+    const chatRecipientName = document.getElementById('chatRecipientName');
+    const messagesContainer = document.getElementById('messagesContainer');
+    const messageInput = document.getElementById('messageInput');
+    const sendMessageBtn = document.getElementById('sendMessageBtn');
+    
     // Check authentication state
     auth.onAuthStateChanged((user) => {
       if (user && user.emailVerified) {
         // User is signed in and email is verified
-        const displayName = user.displayName || user.email;
-        document.getElementById('message').textContent = `Hello, ${displayName}`;
-        document.getElementById('logoutBtn').style.display = 'block';
+        currentUser = user;
+        currentUserName.textContent = user.displayName || user.email;
+        
+        // Update user online status
+        updateUserOnlineStatus(user.uid, true);
+        
+        // Add event listener for window unload to set user offline
+        window.addEventListener('beforeunload', () => {
+          updateUserOnlineStatus(user.uid, false);
+        });
+        
+        // Initialize read status for all existing chats FIRST to prevent counting old messages
+        initializeReadStatusForExistingChats().then(async () => {
+          // Mark all messages as delivered when user comes online
+          await markAllMessagesAsDeliveredOnStartup();
+          
+          // Set up global message status monitoring
+          setupGlobalMessageStatusMonitoring();
+          
+          // Load users after initialization is complete
+          loadUsers();
+          setupMessageInput();
+        });
+        
       } else {
         // User is not signed in or email not verified
         window.location.href = 'index.html';
       }
     });
-
+    
+    // Update user online status in Firestore
+    async function updateUserOnlineStatus(userId, isOnline) {
+      try {
+        await db.collection('users').doc(userId).update({
+          online: isOnline,
+          lastActive: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } catch (error) {
+        console.error('Error updating online status:', error);
+      }
+    }
+    
+    // Global variables for real-time unread count tracking
+    let unreadCountListeners = new Map();
+    
+    // Load all users from Firestore with recent chat sorting
+    function loadUsers() {
+      // Unsubscribe from previous listener if exists
+      if (usersUnsubscribe) {
+        usersUnsubscribe();
+      }
+      
+      // Clean up existing unread count listeners
+      unreadCountListeners.forEach(unsubscribe => unsubscribe());
+      unreadCountListeners.clear();
+      
+      // Clean up existing chat metadata listeners
+      chatMetadataListeners.forEach(unsubscribe => unsubscribe());
+      chatMetadataListeners.clear();
+      
+      // Subscribe to users collection
+      usersUnsubscribe = db.collection('users')
+        .where('uid', '!=', currentUser.uid) // Exclude current user
+        .onSnapshot(async (snapshot) => {
+          if (snapshot.empty) {
+            userList.innerHTML = '<li class="loading">No users found</li>';
+            return;
+          }
+          
+          // Get all users data
+          const users = [];
+          snapshot.forEach((doc) => {
+            const userData = doc.data();
+            users.push(userData);
+          });
+          
+          // Get recent chat data and sort users
+          const sortedUsers = await sortUsersByRecentChat(users);
+          
+          // Clear user list
+          userList.innerHTML = '';
+          
+          // Display sorted users
+          sortedUsers.forEach((userData) => {
+            const userItem = document.createElement('li');
+            userItem.className = 'user-item';
+            userItem.dataset.userId = userData.uid;
+            
+            // Create user avatar with initials
+            const initials = getInitials(userData.displayName || userData.email);
+            
+            // Add recent chat indicator if user has recent messages
+            const recentIndicator = userData.hasRecentChat ? '<span class="recent-chat-indicator"></span>' : '';
+            
+            // Format last message with sender prefix
+            let lastMessageDisplay = '';
+            if (userData.lastMessage) {
+              const isOwnMessage = userData.lastMessageSenderId === currentUser.uid;
+              const prefix = isOwnMessage ? 'You: ' : '';
+              const truncatedMessage = userData.lastMessage.length > 30 
+                ? userData.lastMessage.substring(0, 30) + '...' 
+                : userData.lastMessage;
+              lastMessageDisplay = `<span class="last-message">${prefix}${truncatedMessage}</span>`;
+            }
+            
+            userItem.innerHTML = `
+              <div class="user-avatar">${initials}</div>
+              <div class="user-details">
+                <span class="user-name">${userData.displayName || userData.email}</span>
+                ${lastMessageDisplay}
+              </div>
+              <div class="user-status">
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                  ${userData.lastMessageTime ? `<span class="last-message-time">${formatLastMessageTime(userData.lastMessageTime)}</span>` : ''}
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <span class="unread-count-container" data-user-id="${userData.uid}">
+                      ${userData.unreadCount > 0 ? `<span class="unread-count">${userData.unreadCount > 99 ? '99+' : userData.unreadCount}</span>` : ''}
+                    </span>
+                    <span class="online-status" style="background-color: ${userData.online ? '#27ae60' : '#95a5a6'}"></span>
+                  </div>
+                </div>
+              </div>
+            `;
+            
+            console.log(`User ${userData.displayName || userData.email} loaded with unread count: ${userData.unreadCount}`);
+            
+            // Set up real-time unread count listener for this user
+            setupUnreadCountListener(userData.uid);
+            
+            // Set up real-time chat metadata listener for this user
+            setupChatMetadataListener(userData.uid);
+            
+            // Add click event to start chat with this user
+            userItem.addEventListener('click', async () => {
+              // Deactivate previously selected user
+              const previouslySelected = document.querySelector('.user-item.active');
+              if (previouslySelected) {
+                previouslySelected.classList.remove('active');
+              }
+              
+              // Activate this user
+              userItem.classList.add('active');
+              
+              // Set selected user and load chat
+              selectedUserId = userData.uid;
+              selectedUserName = userData.displayName || userData.email;
+              chatRecipientName.textContent = selectedUserName;
+              
+              // Show chat interface
+              noChatSelected.style.display = 'none';
+              chatInterface.style.display = 'flex';
+              
+              // Immediately clear the unread count in the UI for instant feedback
+              updateUnreadCountDisplay(userData.uid, 0);
+              
+              // Mark chat as read when opened - this permanently clears unread count
+              const chatId = getChatId(currentUser.uid, userData.uid);
+              await markChatAsRead(chatId);
+              
+              // Mark messages as delivered (user is viewing the app)
+              await markMessagesAsDelivered(chatId);
+              
+              // Mark messages as read from this sender
+              await markMessagesAsRead(chatId, userData.uid);
+              
+              console.log('Chat opened and marked as read:', chatId);
+              
+              // Load messages for this chat (after marking as read)
+              loadMessages();
+              
+              // Ensure the count stays at 0 for the active chat
+              updateUnreadCountDisplay(userData.uid, 0);
+            });
+            
+            userList.appendChild(userItem);
+          });
+        }, (error) => {
+          console.error('Error loading users:', error);
+          userList.innerHTML = '<li class="loading">Error loading users</li>';
+        });
+    }
+    
+    // Global variable to store chat metadata listeners
+    let chatMetadataListeners = new Map();
+    
+    // Set up real-time listener for chat metadata changes
+    function setupChatMetadataListener(userId) {
+      const chatId = getChatId(currentUser.uid, userId);
+      
+      // Listen to chat metadata changes
+      const metadataUnsubscribe = db.collection('chats')
+        .doc(chatId)
+        .onSnapshot((doc) => {
+          console.log(`Chat metadata changed for user ${userId}`);
+          
+          if (doc.exists) {
+            const chatData = doc.data();
+            console.log('Updated chat data:', chatData);
+            
+            // Update the specific user's last message display
+            updateUserLastMessageDisplay(userId, chatData);
+          }
+        });
+      
+      // Store unsubscribe function
+      chatMetadataListeners.set(userId, metadataUnsubscribe);
+    }
+    
+    // Update a specific user's last message display in real-time
+    function updateUserLastMessageDisplay(userId, chatData) {
+      const userItem = document.querySelector(`[data-user-id="${userId}"]`);
+      if (!userItem) return;
+      
+      const userDetailsDiv = userItem.querySelector('.user-details');
+      if (!userDetailsDiv) return;
+      
+      // Find existing last message element or create new one
+      let lastMessageElement = userDetailsDiv.querySelector('.last-message');
+      
+      if (chatData.lastMessage) {
+        const isOwnMessage = chatData.lastMessageSenderId === currentUser.uid;
+        const prefix = isOwnMessage ? 'You: ' : '';
+        const truncatedMessage = chatData.lastMessage.length > 30 
+          ? chatData.lastMessage.substring(0, 30) + '...' 
+          : chatData.lastMessage;
+        
+        if (lastMessageElement) {
+          lastMessageElement.textContent = prefix + truncatedMessage;
+        } else {
+          lastMessageElement = document.createElement('span');
+          lastMessageElement.className = 'last-message';
+          lastMessageElement.textContent = prefix + truncatedMessage;
+          userDetailsDiv.appendChild(lastMessageElement);
+        }
+      } else if (lastMessageElement) {
+        lastMessageElement.remove();
+      }
+      
+      // Update the timestamp
+      const timeElement = userItem.querySelector('.last-message-time');
+      if (timeElement && chatData.lastMessageTime) {
+        timeElement.textContent = formatLastMessageTime(chatData.lastMessageTime);
+      }
+    }
+    
+    // Sort users by recent chat activity and calculate unread messages
+    async function sortUsersByRecentChat(users) {
+      const usersWithChatData = await Promise.all(users.map(async (user) => {
+        const chatId = getChatId(currentUser.uid, user.uid);
+        
+        try {
+          // Get chat metadata
+          const chatDoc = await db.collection('chats').doc(chatId).get();
+          
+          // Get unread message count
+          const unreadCount = await getUnreadMessageCount(chatId, user.uid);
+          
+          if (chatDoc.exists) {
+            const chatData = chatDoc.data();
+            return {
+              ...user,
+              lastMessage: chatData.lastMessage || null,
+              lastMessageTime: chatData.lastMessageTime || null,
+              lastMessageSenderId: chatData.lastMessageSenderId || null,
+              hasRecentChat: true,
+              unreadCount: unreadCount,
+              sortPriority: chatData.lastMessageTime ? chatData.lastMessageTime.toMillis() : 0
+            };
+          } else {
+            return {
+              ...user,
+              lastMessage: null,
+              lastMessageTime: null,
+              lastMessageSenderId: null,
+              hasRecentChat: false,
+              unreadCount: unreadCount,
+              sortPriority: 0
+            };
+          }
+        } catch (error) {
+          console.error('Error fetching chat data for user:', user.uid, error);
+          return {
+            ...user,
+            lastMessage: null,
+            lastMessageTime: null,
+            hasRecentChat: false,
+            unreadCount: 0,
+            sortPriority: 0
+          };
+        }
+      }));
+      
+      // Sort users: recent chats first (by timestamp), then online users, then by name
+      return usersWithChatData.sort((a, b) => {
+        // First priority: recent chat activity
+        if (a.sortPriority !== b.sortPriority) {
+          return b.sortPriority - a.sortPriority; // Most recent first
+        }
+        
+        // Second priority: online status
+        if (a.online !== b.online) {
+          return b.online ? 1 : -1; // Online users first
+        }
+        
+        // Third priority: alphabetical by name
+        const nameA = a.displayName || a.email || '';
+        const nameB = b.displayName || b.email || '';
+        return nameA.localeCompare(nameB);
+      });
+    }
+    
+    // Get unread message count for a chat - only count truly unread messages
+    async function getUnreadMessageCount(chatId, fromUserId) {
+      try {
+        // Get the last time we read messages in this chat
+        const lastReadTime = await getLastReadTime(chatId);
+        
+        let query = db.collection('chats')
+          .doc(chatId)
+          .collection('messages')
+          .where('senderId', '==', fromUserId);
+        
+        if (lastReadTime) {
+          // Only count messages sent after our last read time
+          query = query.where('timestamp', '>', lastReadTime);
+          console.log(`Counting messages after last read time for ${fromUserId}:`, lastReadTime.toDate());
+          
+          const unreadMessages = await query.get();
+          const count = unreadMessages.size;
+          console.log(`Unread count for ${fromUserId}:`, count);
+          return count;
+        } else {
+          // If no read status exists, count recent messages (last 24 hours)
+          console.log(`No read status found for ${fromUserId}, counting recent messages`);
+          const oneDayAgo = new Date();
+          oneDayAgo.setHours(oneDayAgo.getHours() - 24);
+          
+          query = query.where('timestamp', '>', firebase.firestore.Timestamp.fromDate(oneDayAgo));
+          const unreadMessages = await query.get();
+          const count = unreadMessages.size;
+          console.log(`Recent unread count for ${fromUserId}:`, count);
+          return count;
+        }
+      } catch (error) {
+        console.error('Error getting unread count:', error);
+        return 0;
+      }
+    }
+    
+    // Get the last time we read messages in this chat
+    async function getLastReadTime(chatId) {
+      try {
+        const readStatusDoc = await db.collection('chat_read_status')
+          .doc(`${chatId}_${currentUser.uid}`)
+          .get();
+        
+        if (readStatusDoc.exists) {
+          return readStatusDoc.data().lastReadTime;
+        }
+        return null;
+      } catch (error) {
+        console.error('Error getting last read time:', error);
+        return null;
+      }
+    }
+    
+    // Mark chat as read when user opens it
+    async function markChatAsRead(chatId) {
+      try {
+        await db.collection('chat_read_status')
+          .doc(`${chatId}_${currentUser.uid}`)
+          .set({
+            lastReadTime: firebase.firestore.FieldValue.serverTimestamp(),
+            userId: currentUser.uid,
+            chatId: chatId
+          });
+        console.log('Chat marked as read:', chatId);
+      } catch (error) {
+        console.error('Error marking chat as read:', error);
+      }
+    }
+    
+    // Initialize read status for existing chats - only create structure, don't mark as read
+    async function initializeReadStatusForExistingChats() {
+      try {
+        console.log('Initializing read status for existing chats...');
+        
+        // Get all chats where current user is a participant
+        const chatsSnapshot = await db.collection('chats')
+          .where('participants', 'array-contains', currentUser.uid)
+          .get();
+        
+        if (chatsSnapshot.empty) {
+          console.log('No existing chats found');
+          return;
+        }
+        
+        // For each chat, only initialize if no read status exists at all
+        for (const chatDoc of chatsSnapshot.docs) {
+          const chatId = chatDoc.id;
+          const readStatusDocId = `${chatId}_${currentUser.uid}`;
+          
+          // Check if read status already exists
+          const readStatusDoc = await db.collection('chat_read_status')
+            .doc(readStatusDocId)
+            .get();
+          
+          if (!readStatusDoc.exists) {
+            // Only create a placeholder with a very old timestamp
+            // This allows unread counting to work, but shows unread messages from recent activity
+            const veryOldTime = firebase.firestore.Timestamp.fromDate(new Date('2020-01-01'));
+            
+            await db.collection('chat_read_status')
+              .doc(readStatusDocId)
+              .set({
+                lastReadTime: veryOldTime,
+                userId: currentUser.uid,
+                chatId: chatId,
+                initialized: true,
+                initializedAt: firebase.firestore.Timestamp.now()
+              });
+              
+            console.log('Initialized read status with old timestamp for chat:', chatId);
+          } else {
+            console.log('Read status already exists for chat:', chatId);
+          }
+        }
+        
+        console.log('Read status initialization complete');
+        
+        // Wait a moment to ensure Firestore has processed the updates
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+      } catch (error) {
+        console.error('Error initializing read status:', error);
+      }
+    }
+    
+    // Set up real-time unread count listener for a specific user
+    function setupUnreadCountListener(userId) {
+      const chatId = getChatId(currentUser.uid, userId);
+      
+      // Listen to new messages from this user only
+      const messagesUnsubscribe = db.collection('chats')
+        .doc(chatId)
+        .collection('messages')
+        .where('senderId', '==', userId)
+        .onSnapshot(async (snapshot) => {
+          console.log(`Message changes detected for user ${userId}`);
+          
+          // If this chat is currently selected (active), keep count at 0
+          if (selectedUserId === userId) {
+            console.log(`Chat ${userId} is active, keeping count at 0`);
+            updateUnreadCountDisplay(userId, 0);
+            return;
+          }
+          
+          // For inactive chats, calculate unread count
+          const unreadCount = await getUnreadMessageCount(chatId, userId);
+          console.log(`Updating unread count for inactive chat ${userId}: ${unreadCount}`);
+          updateUnreadCountDisplay(userId, unreadCount);
+        });
+      
+      // Store unsubscribe function
+      unreadCountListeners.set(userId, messagesUnsubscribe);
+    }
+    
+    // Update unread count display for a specific user
+    function updateUnreadCountDisplay(userId, unreadCount) {
+      console.log(`Updating unread count display for user ${userId}: ${unreadCount}`);
+      
+      // Find the unread container for this user
+      const userItem = document.querySelector(`[data-user-id="${userId}"]`);
+      if (!userItem) {
+        console.log(`User item not found for ${userId}`);
+        return;
+      }
+      
+      const unreadContainer = userItem.querySelector('.unread-count-container');
+      if (!unreadContainer) {
+        console.log(`Unread container not found for user ${userId}`);
+        return;
+      }
+      
+      // Update the display
+      if (unreadCount > 0) {
+        const displayCount = unreadCount > 99 ? '99+' : unreadCount.toString();
+        unreadContainer.innerHTML = `<span class="unread-count">${displayCount}</span>`;
+        console.log(`Showed unread count ${displayCount} for user ${userId}`);
+      } else {
+        unreadContainer.innerHTML = '';
+        console.log(`Cleared unread count for user ${userId}`);
+      }
+    }
+    
+    // Format last message time for display
+    function formatLastMessageTime(timestamp) {
+      if (!timestamp) return '';
+      
+      const now = new Date();
+      const messageTime = timestamp.toDate();
+      const diffMs = now - messageTime;
+      const diffMinutes = Math.floor(diffMs / (1000 * 60));
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      
+      if (diffMinutes < 1) {
+        return 'now';
+      } else if (diffMinutes < 60) {
+        return `${diffMinutes}m`;
+      } else if (diffHours < 24) {
+        return `${diffHours}h`;
+      } else if (diffDays < 7) {
+        return `${diffDays}d`;
+      } else {
+        return messageTime.toLocaleDateString();
+      }
+    }
+    
+    // Get initials from name
+    function getInitials(name) {
+      return name
+        .split(' ')
+        .map(word => word.charAt(0))
+        .join('')
+        .toUpperCase()
+        .substring(0, 2);
+    }
+    
+    // Get chat ID between two users
+    function getChatId(userId1, userId2) {
+      // Sort user IDs to ensure consistency
+      const sortedUserIds = [userId1, userId2].sort();
+      return `${sortedUserIds[0]}_${sortedUserIds[1]}`;
+    }
+    
+    // Load messages for the selected chat - SIMPLE AND RELIABLE VERSION
+    function loadMessages() {
+      // Clear messages container
+      messagesContainer.innerHTML = '';
+      
+      // Unsubscribe from previous messages listener
+      if (messagesUnsubscribe) {
+        messagesUnsubscribe();
+      }
+      
+      if (!selectedUserId) return;
+      
+      const chatId = getChatId(currentUser.uid, selectedUserId);
+      console.log('Setting up message listener for chat:', chatId);
+      
+      // Simple, reliable real-time listener - always reload all messages
+      messagesUnsubscribe = db.collection('chats')
+        .doc(chatId)
+        .collection('messages')
+        .orderBy('timestamp', 'asc')
+        .onSnapshot(async (snapshot) => {
+          console.log('Message snapshot received:', {
+            size: snapshot.size,
+            fromCache: snapshot.metadata.fromCache,
+            hasPendingWrites: snapshot.metadata.hasPendingWrites
+          });
+          
+          // Always clear and reload all messages for consistency
+          messagesContainer.innerHTML = '';
+          
+          if (snapshot.empty) {
+            messagesContainer.innerHTML = '<div class="loading">No messages yet. Start the conversation!</div>';
+            return;
+          }
+          
+          // Get all messages and sort them
+          const messages = [];
+          snapshot.forEach((doc) => {
+            const message = doc.data();
+            message.id = doc.id;
+            messages.push(message);
+          });
+          
+          // Sort messages by timestamp
+          messages.sort((a, b) => {
+            if (!a.timestamp) return -1;
+            if (!b.timestamp) return 1;
+            return a.timestamp.toMillis() - b.timestamp.toMillis();
+          });
+          
+          // Display all messages in order
+          messages.forEach(message => {
+            displayMessage(message);
+          });
+          
+          console.log(`Displayed ${messages.length} messages`);
+          
+          // Auto-mark as read when viewing messages (only if not from cache)
+          if (!snapshot.metadata.fromCache && !snapshot.metadata.hasPendingWrites) {
+            await markChatAsRead(chatId);
+            updateUnreadCountDisplay(selectedUserId, 0);
+            
+            // Mark messages as read from the other user when viewing
+            await markMessagesAsRead(chatId, selectedUserId);
+          }
+          
+          // Scroll to bottom
+          setTimeout(scrollToBottom, 50);
+      
+        }, (error) => {
+          console.error('Error loading messages:', error);
+          
+          let errorMessage = 'Error loading messages.';
+          if (error.code === 'permission-denied') {
+            errorMessage = 'Permission denied. Check Firestore security rules in Firebase Console.';
+          } else if (error.code === 'failed-precondition') {
+            errorMessage = 'Firestore indexes may be building. Try again in a few minutes.';
+          } else if (error.code === 'unavailable') {
+            errorMessage = 'Network error. Check your internet connection.';
+          }
+          
+          messagesContainer.innerHTML = `<div class="loading" style="color: #e74c3c;">${errorMessage}<br><br>Error: ${error.code}</div>`;
+        });
+    }
+    
+    // Get message status based on read status and delivery
+    function getMessageStatus(message) {
+      // Only show status for own messages
+      if (message.senderId !== currentUser.uid) {
+        return null;
+      }
+      
+      console.log('=== CHECKING MESSAGE STATUS ===');
+      console.log('Message ID:', message.id);
+      console.log('Message text:', message.text);
+      console.log('Sender ID:', message.senderId);
+      console.log('Recipient ID:', message.recipientId);
+      console.log('Selected User ID:', selectedUserId);
+      console.log('ReadBy array:', message.readBy);
+      console.log('DeliveredTo array:', message.deliveredTo);
+      console.log('ReadBy type:', typeof message.readBy, 'IsArray:', Array.isArray(message.readBy));
+      console.log('DeliveredTo type:', typeof message.deliveredTo, 'IsArray:', Array.isArray(message.deliveredTo));
+      
+      // Check if message was read by the recipient
+      if (message.readBy && Array.isArray(message.readBy) && message.readBy.includes(message.recipientId)) {
+        console.log('✅ Message is READ - showing RED ticks');
+        return 'read';
+      }
+      
+      // Check if message was delivered to the recipient
+      if (message.deliveredTo && Array.isArray(message.deliveredTo) && message.deliveredTo.includes(message.recipientId)) {
+        console.log('✅ Message is DELIVERED - showing DOUBLE GREY ticks');
+        return 'delivered';
+      }
+      
+      // Default to sent status
+      console.log('❌ Message is SENT - showing SINGLE GREY tick');
+      console.log('Delivery check failed: deliveredTo =', message.deliveredTo, 'recipientId =', message.recipientId);
+      console.log('=== END STATUS CHECK ===');
+      return 'sent';
+    }
+    
+    // Generate tick mark SVG
+    function createTickSVG() {
+      return `
+        <svg viewBox="0 0 16 16" fill="currentColor">
+          <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+        </svg>
+      `;
+    }
+    
+    // Create message status HTML
+    function createMessageStatusHTML(status) {
+      if (!status) return '';
+      
+      const tickSVG = createTickSVG();
+      
+      switch (status) {
+        case 'sent':
+          return `
+            <div class="message-status status-sent">
+              <span class="tick">${tickSVG}</span>
+            </div>
+          `;
+        case 'delivered':
+          return `
+            <div class="message-status status-delivered double-tick">
+              <span class="tick">${tickSVG}</span>
+              <span class="tick">${tickSVG}</span>
+            </div>
+          `;
+        case 'read':
+          return `
+            <div class="message-status status-read double-tick">
+              <span class="tick">${tickSVG}</span>
+              <span class="tick">${tickSVG}</span>
+            </div>
+          `;
+        default:
+          return '';
+      }
+    }
+    
+    // Display a message in the chat
+    function displayMessage(message) {
+      const isOwn = message.senderId === currentUser.uid;
+      
+      console.log('Displaying message:', {
+        text: message.text,
+        senderId: message.senderId,
+        currentUserId: currentUser.uid,
+        isOwn: isOwn
+      });
+      
+      const messageElement = document.createElement('div');
+      messageElement.className = `message ${isOwn ? 'own' : ''}`;
+      messageElement.dataset.messageId = message.id || 'temp';
+      messageElement.dataset.timestamp = message.timestamp ? message.timestamp.toMillis().toString() : '0';
+      
+      // Format timestamp
+      const timestamp = message.timestamp ? message.timestamp.toDate() : new Date();
+      const formattedTime = formatTime(timestamp);
+      
+      // Escape HTML to prevent XSS
+      const escapedText = escapeHtml(message.text);
+      
+      // Get message status for own messages
+      const messageStatus = getMessageStatus(message);
+      const statusHTML = createMessageStatusHTML(messageStatus);
+      
+      messageElement.innerHTML = `
+        <div class="message-content">
+          ${!isOwn ? `<div class="message-sender">${selectedUserName}</div>` : ''}
+          <div class="message-text">${escapedText}</div>
+          <div class="message-time">
+            <span>${formattedTime}</span>
+            ${statusHTML}
+          </div>
+        </div>
+      `;
+      
+      messagesContainer.appendChild(messageElement);
+    }
+    
+    // Escape HTML to prevent XSS attacks
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    // Format time for messages
+    function formatTime(date) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    
+    // Scroll messages container to bottom
+    function scrollToBottom() {
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+    
+    // Setup message input functionality
+    function setupMessageInput() {
+      // Enable/disable send button based on input
+      messageInput.addEventListener('input', () => {
+        sendMessageBtn.disabled = !messageInput.value.trim();
+        
+        // Auto-resize textarea
+        messageInput.style.height = 'auto';
+        messageInput.style.height = (messageInput.scrollHeight > 100 ? 100 : messageInput.scrollHeight) + 'px';
+      });
+      
+      // Send message on Enter (but allow Shift+Enter for new line)
+      messageInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          if (!sendMessageBtn.disabled) {
+            sendMessage();
+          }
+        }
+      });
+      
+      // Send message on button click
+      sendMessageBtn.addEventListener('click', sendMessage);
+    }
+    
+    // Sync chat metadata with the actual latest message
+    async function syncChatMetadata(chatId) {
+      try {
+        console.log('Syncing chat metadata for:', chatId);
+        
+        // Get the actual latest message from the messages collection
+        const latestMessageQuery = await db.collection('chats')
+          .doc(chatId)
+          .collection('messages')
+          .orderBy('timestamp', 'desc')
+          .limit(1)
+          .get();
+        
+        if (!latestMessageQuery.empty) {
+          const latestMessage = latestMessageQuery.docs[0].data();
+          console.log('Latest message found:', latestMessage);
+          
+          // Update the chat metadata with the actual latest message
+          await db.collection('chats').doc(chatId).set({
+            lastMessage: latestMessage.text,
+            lastMessageTime: latestMessage.timestamp,
+            lastMessageSenderId: latestMessage.senderId
+          }, { merge: true });
+          
+          console.log('Chat metadata synced successfully');
+        }
+      } catch (error) {
+        console.error('Error syncing chat metadata:', error);
+      }
+    }
+    
+    // Mark messages as delivered when user comes online or opens app
+    async function markMessagesAsDelivered(chatId) {
+      try {
+        console.log(`Marking messages as delivered for chat: ${chatId}, user: ${currentUser.uid}`);
+        
+        // Get all undelivered messages sent to current user (where deliveredTo is null or doesn't include current user)
+        const undeliveredMessages = await db.collection('chats')
+          .doc(chatId)
+          .collection('messages')
+          .where('recipientId', '==', currentUser.uid)
+          .get();
+        
+        // Filter messages that haven't been delivered to current user yet
+        const messagesToUpdate = [];
+        undeliveredMessages.forEach((doc) => {
+          const messageData = doc.data();
+          const deliveredTo = messageData.deliveredTo || [];
+          
+          // Check if this message hasn't been delivered to current user yet
+          if (!deliveredTo.includes(currentUser.uid)) {
+            messagesToUpdate.push(doc);
+          }
+        });
+        
+        if (messagesToUpdate.length > 0) {
+          // Update each message to mark as delivered
+          const batch = db.batch();
+          messagesToUpdate.forEach((doc) => {
+            batch.update(doc.ref, {
+              deliveredTo: firebase.firestore.FieldValue.arrayUnion(currentUser.uid),
+              deliveryTime: firebase.firestore.FieldValue.serverTimestamp()
+            });
+          });
+          
+          await batch.commit();
+          console.log(`Marked ${messagesToUpdate.length} messages as delivered for ${currentUser.uid}`);
+        } else {
+          console.log(`No messages to mark as delivered for ${currentUser.uid}`);
+        }
+      } catch (error) {
+        console.error('Error marking messages as delivered:', error);
+      }
+    }
+    
+    // Mark all messages as delivered when user comes online (startup)
+    async function markAllMessagesAsDeliveredOnStartup() {
+      try {
+        console.log('Marking all messages as delivered on startup...');
+        
+        // Get all chats where current user is a participant
+        const chatsSnapshot = await db.collection('chats')
+          .where('participants', 'array-contains', currentUser.uid)
+          .get();
+        
+        if (chatsSnapshot.empty) {
+          console.log('No chats found for delivery marking');
+          return;
+        }
+        
+        // Mark messages as delivered in each chat
+        for (const chatDoc of chatsSnapshot.docs) {
+          const chatId = chatDoc.id;
+          await markMessagesAsDelivered(chatId);
+        }
+        
+        console.log('Completed marking all messages as delivered on startup');
+      } catch (error) {
+        console.error('Error marking all messages as delivered on startup:', error);
+      }
+    }
+    
+    // Mark messages as read when user views the chat
+    async function markMessagesAsRead(chatId, senderId) {
+      try {
+        console.log(`Marking messages as read for chat: ${chatId}, sender: ${senderId}, reader: ${currentUser.uid}`);
+        
+        // Get all unread messages from the sender (where readBy is null or doesn't include current user)
+        const allMessages = await db.collection('chats')
+          .doc(chatId)
+          .collection('messages')
+          .where('senderId', '==', senderId)
+          .get();
+        
+        // Filter messages that haven't been read by current user yet
+        const messagesToUpdate = [];
+        allMessages.forEach((doc) => {
+          const messageData = doc.data();
+          const readBy = messageData.readBy || [];
+          
+          // Check if this message hasn't been read by current user yet
+          if (!readBy.includes(currentUser.uid)) {
+            messagesToUpdate.push(doc);
+          }
+        });
+        
+        if (messagesToUpdate.length > 0) {
+          // Update each message to mark as read
+          const batch = db.batch();
+          messagesToUpdate.forEach((doc) => {
+            batch.update(doc.ref, {
+              readBy: firebase.firestore.FieldValue.arrayUnion(currentUser.uid),
+              readTime: firebase.firestore.FieldValue.serverTimestamp()
+            });
+          });
+          
+          await batch.commit();
+          console.log(`Marked ${messagesToUpdate.length} messages as read from ${senderId}`);
+        } else {
+          console.log(`No messages to mark as read from ${senderId}`);
+        }
+      } catch (error) {
+        console.error('Error marking messages as read:', error);
+      }
+    }
+    
+    // Simplified message status tracking - handled within main message listener
+    function setupGlobalMessageStatusMonitoring() {
+      console.log('Message status monitoring is now handled within the main message listener');
+      // Removed problematic global monitoring that was causing message disappearing
+      // Status updates are now handled efficiently within the main loadMessages() function
+    }
+    
+    // Send a message
+    async function sendMessage() {
+      if (!selectedUserId || !messageInput.value.trim()) return;
+      
+      const messageText = messageInput.value.trim();
+      messageInput.value = '';
+      messageInput.style.height = 'auto';
+      sendMessageBtn.disabled = true;
+      
+      try {
+        const chatId = getChatId(currentUser.uid, selectedUserId);
+        console.log('Sending message:', {
+          chatId,
+          from: currentUser.uid,
+          to: selectedUserId,
+          text: messageText
+        });
+        
+        // Check if recipient is currently online
+        const recipientDoc = await db.collection('users').doc(selectedUserId).get();
+        const recipientData = recipientDoc.data();
+        const isRecipientOnline = recipientData && recipientData.online === true;
+        
+        console.log(`Recipient ${selectedUserId} online status:`, isRecipientOnline);
+        
+        // Add message to Firestore with initial status tracking
+        const messageData = {
+          text: messageText,
+          senderId: currentUser.uid,
+          recipientId: selectedUserId,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          readBy: null, // Will be updated when recipient reads the message
+          status: 'sent' // Initial status
+        };
+        
+        // If recipient is online, immediately mark as delivered
+        if (isRecipientOnline) {
+          messageData.deliveredTo = [selectedUserId];
+          messageData.deliveryTime = firebase.firestore.FieldValue.serverTimestamp();
+          messageData.status = 'delivered';
+          console.log('✅ Recipient is online - marking message as delivered immediately');
+        } else {
+          messageData.deliveredTo = null; // Will be updated when recipient comes online
+          console.log('❌ Recipient is offline - message will be delivered when they come online');
+        }
+        
+        const messageRef = await db.collection('chats')
+          .doc(chatId)
+          .collection('messages')
+          .add(messageData);
+        
+        console.log('Message added with ID:', messageRef.id);
+        
+        // Update chat metadata immediately
+        await db.collection('chats').doc(chatId).set({
+          participants: [currentUser.uid, selectedUserId],
+          lastMessage: messageText,
+          lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
+          lastMessageSenderId: currentUser.uid
+        }, { merge: true });
+        
+        console.log('Chat metadata updated successfully');
+        
+        // Also sync metadata to ensure consistency
+        setTimeout(() => syncChatMetadata(chatId), 1000);
+        
+      } catch (error) {
+        console.error('Error sending message:', error);
+        console.error('Error details:', {
+          code: error.code,
+          message: error.message
+        });
+        
+        // Show user-friendly error message based on error type
+        let errorMessage = 'Failed to send message. ';
+        if (error.code === 'permission-denied') {
+          errorMessage += 'Permission denied. Please check Firestore security rules.';
+        } else if (error.code === 'unavailable') {
+          errorMessage += 'Network error. Please check your internet connection.';
+        } else {
+          errorMessage += 'Please try again.';
+        }
+        
+        alert(errorMessage);
+        
+        // Restore the message in the input if it failed to send
+        messageInput.value = messageText;
+        messageInput.style.height = 'auto';
+        messageInput.style.height = (messageInput.scrollHeight > 100 ? 100 : messageInput.scrollHeight) + 'px';
+      }
+    }
+    
+    // Logout functionality
     async function logout() {
       try {
+        // Set user offline before logging out
+        if (currentUser) {
+          await updateUserOnlineStatus(currentUser.uid, false);
+        }
+        
+        // Unsubscribe from listeners
+        if (usersUnsubscribe) usersUnsubscribe();
+        if (messagesUnsubscribe) messagesUnsubscribe();
+        
+        // Sign out from Firebase
         await auth.signOut();
         window.location.href = 'index.html';
       } catch (error) {
@@ -76,7 +1640,8 @@
       }
     }
 
-    document.getElementById('logoutBtn').addEventListener('click', logout);
+    // Attach logout event listener
+    logoutBtn.addEventListener('click', logout);
   </script>
 </body>
 </html>
